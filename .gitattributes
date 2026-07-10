@@ -1,0 +1,5 @@
+# Shell scripts MUST use LF line endings — CRLF breaks them in Linux containers
+# (/bin/sh fails on the trailing \r). Force LF regardless of the OS Git runs on.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile text eol=lf
