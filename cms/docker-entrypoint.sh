@@ -1,18 +1,21 @@
 #!/bin/sh
 # On container start (production):
-#   1. Apply DB migrations non-interactively (creates/updates tables safely).
-#   2. Seed starter content (idempotent — only creates the Home page if absent).
-#   3. Launch the app.
-# This replaces the dev-only interactive "push", so it runs unattended on Render.
+#   1. Apply DB migrations (non-interactive, safe).
+#   2. Start Next.js.
+#   3. Seed content via the running server's API (reliable — a standalone
+#      getPayload() hangs in the container, so we talk to the live HTTP server).
 set -e
 
 echo "[entrypoint] Running database migrations…"
-npx payload migrate || {
-  echo "[entrypoint] migrate failed"; exit 1;
-}
-
-echo "[entrypoint] Seeding starter content (idempotent)…"
-npx payload run src/seed.ts || echo "[entrypoint] seed skipped/failed (non-fatal)"
+npx payload migrate || { echo "[entrypoint] migrate failed"; exit 1; }
 
 echo "[entrypoint] Starting Next.js…"
-exec npm run start
+npm run start &
+APP_PID=$!
+
+echo "[entrypoint] Seeding content via API (idempotent)…"
+SEED_BASE_URL="http://localhost:3001" npx tsx src/seed-api.mjs || \
+  echo "[entrypoint] seed skipped/failed (non-fatal)"
+
+# Keep the container alive on the Next.js process.
+wait $APP_PID

@@ -37,10 +37,31 @@ export const seed = async () => {
     payload.logger.info('Seed: "home" page already exists — left untouched')
   }
 
-  // Brand + Navigation globals.
-  await payload.updateGlobal({ slug: 'brand', data: seedBrand as any })
-  await payload.updateGlobal({ slug: 'navigation', data: seedNav as any })
-  payload.logger.info('Seed: brand + navigation set')
+  // Brand + Navigation globals — seed ONLY on first run. On later restarts we
+  // must NOT overwrite them, or the customer's logo/colors/nav edits would be
+  // reset every time the server restarts. We detect "already configured" by a
+  // hidden `seeded` flag we set the first time.
+  const brand = await payload.findGlobal({ slug: 'brand' })
+  if (!(brand as any)?.seeded) {
+    await payload.updateGlobal({
+      slug: 'brand',
+      data: { ...seedBrand, seeded: true } as any,
+    })
+    payload.logger.info('Seed: brand set (first run)')
+  } else {
+    payload.logger.info('Seed: brand already configured — left untouched')
+  }
+
+  const nav = await payload.findGlobal({ slug: 'navigation' })
+  if (!(nav as any)?.seeded) {
+    await payload.updateGlobal({
+      slug: 'navigation',
+      data: { ...seedNav, seeded: true } as any,
+    })
+    payload.logger.info('Seed: navigation set (first run)')
+  } else {
+    payload.logger.info('Seed: navigation already configured — left untouched')
+  }
 
   payload.logger.info('Seed complete.')
 }

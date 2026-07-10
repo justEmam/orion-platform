@@ -3,15 +3,15 @@
  * admin. This is what makes the site self-service: the client clicks
  * "Create Page", gives it a slug, and it's instantly live here. No developer.
  *
- * `generateStaticParams` pre-lists existing published pages; new ones still
- * render on demand (dynamicParams defaults to true).
+ * Rendered per-request (reads the DB at request time). We deliberately do NOT
+ * pre-build pages at build time — the DB isn't available then, which caused
+ * DYNAMIC_SERVER_USAGE build errors. force-dynamic makes every page render on
+ * demand, which is exactly what a CMS-driven, editable-anytime site wants.
  */
-import { getPayload } from 'payload'
-import config from '../../../payload.config'
 import { renderPage } from '../renderPage'
 import { buildMetadata } from '../meta'
 
-export const dynamicParams = true
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,
@@ -20,21 +20,6 @@ export async function generateMetadata({
 }) {
   const { slug } = await params
   return buildMetadata(slug)
-}
-
-export async function generateStaticParams() {
-  try {
-    const payload = await getPayload({ config })
-    const pages = await payload.find({
-      collection: 'pages',
-      where: { slug: { not_equals: 'home' } },
-      limit: 100,
-      depth: 0,
-    })
-    return pages.docs.map((p: any) => ({ slug: p.slug }))
-  } catch {
-    return []
-  }
 }
 
 export default async function DynamicPage({

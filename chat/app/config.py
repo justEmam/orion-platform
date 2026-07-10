@@ -32,10 +32,11 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
 
     # --- Embeddings -----------------------------------------------------
-    # "hf"     -> Hugging Face Inference API (FREE hosted, tiny image) [default]
-    # "openai" -> hosted, ~pennies, highest quality
-    # "local"  -> in-container sentence-transformers (~2GB torch; opt-in)
-    embeddings_provider: Literal["hf", "openai", "local"] = "hf"
+    # "openai" -> hosted, multilingual (Arabic+English), tiny image [default]
+    # "hf"     -> Hugging Face Inference API (unreliable free tier — avoid)
+    # "local"  -> in-container sentence-transformers (~2GB torch; opt-in via
+    #             requirements-local.txt)
+    embeddings_provider: Literal["openai", "hf", "local"] = "openai"
     hf_api_key: str | None = None
     hf_embeddings_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     openai_embeddings_model: str = "text-embedding-3-small"

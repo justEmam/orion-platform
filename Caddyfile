@@ -1,0 +1,24 @@
+# Caddy reverse proxy — the single entry point for the whole app.
+#
+# Caddy automatically fetches + renews a free HTTPS certificate for your domain
+# (via Let's Encrypt) and routes traffic:
+#   yourdomain.com/chat-api/*  -> the chat service (path stripped)
+#   yourdomain.com/*           -> the site + admin (Payload/Next.js)
+#
+# Everything is same-origin (one domain), so there are no CORS problems.
+#
+# {$SITE_DOMAIN} is filled from the environment (Caddyfile supports env vars):
+#   - on the VPS:  SITE_DOMAIN=yourdomain.com   -> real HTTPS cert
+#   - locally:     SITE_DOMAIN=http://localhost -> plain HTTP for testing
+
+{$SITE_DOMAIN} {
+	# Chat API — strip the /chat-api prefix, forward the rest to the chat service.
+	handle_path /chat-api/* {
+		reverse_proxy chat:8000
+	}
+
+	# Everything else -> the CMS + public site.
+	handle {
+		reverse_proxy cms:3001
+	}
+}

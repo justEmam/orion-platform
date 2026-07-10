@@ -1,0 +1,76 @@
+# ============================================================
+# PRODUCTION stack — for a VPS (or any Docker host).
+#
+#   caddy   reverse proxy + automatic HTTPS  (the only public entry point)
+#   cms     Payload CMS + public site
+#   chat    FastAPI agentic RAG service
+#   db      Postgres + pgvector
+#
+# Run:  docker compose -f docker-compose.prod.yml up -d --build
+#
+# Only Caddy is exposed to the internet (ports 80/443). Everything else talks
+# over the private Docker network. Secrets come from the .env files referenced
+# below (create them from the .env.example templates first).
+# ============================================================
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Real domain on the VPS (e.g. orionilam.com) -> Caddy gets HTTPS.
+      # For a local test, set SITE_DOMAIN=http://localhost in caddy.env.
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    env_file: ./caddy.env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - cms
+      - chat
+
+  cms:
+    build: ./cms
+    restart: unless-stopped
+    env_file: ./cms/.env.prod
+    expose:
+      - "3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      chat:
+        condition: service_started
+
+  chat:
+    build: ./chat
+    restart: unless-stopped
+    env_file: ./chat/.env.prod
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orion}
+      POSTGRES_DB: ${POSTGRES_DB:-orion}
+    env_file: ./db.env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orion}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:

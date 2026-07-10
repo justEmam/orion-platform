@@ -2,6 +2,10 @@
 import { renderPage } from './renderPage'
 import { buildMetadata } from './meta'
 
+// Rendered per-request (reads the DB at request time), not pre-built at
+// build time — otherwise the production build errors with DYNAMIC_SERVER_USAGE.
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata() {
   return buildMetadata('home')
 }

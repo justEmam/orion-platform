@@ -37,7 +37,9 @@ services:
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
       - key: EMBEDDINGS_PROVIDER
-        value: local
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false        # paste in dashboard (used for embeddings)
       # Shared DB — Render injects the connection string; chat needs the
       # psycopg dialect prefix, so we build it from the DB's parts below.
       - key: DATABASE_URL

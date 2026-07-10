@@ -20,12 +20,11 @@ langchain-postgres==0.0.13
 psycopg[binary]==3.2.3
 pgvector==0.3.6
 
-# --- Embeddings: local, multilingual (Arabic + English), runs offline. ---
-# sentence-transformers pulls torch; the Dockerfile installs the CPU-only torch
-# wheel to keep the image far smaller (no CUDA). The model itself is
-# pre-downloaded at build time (see Dockerfile) so the container never stalls on
-# the first request.
-sentence-transformers==3.3.1
+# --- Embeddings: hosted via OpenAI (text-embedding-3-small, multilingual). ---
+# No local ML stack — keeps the image ~200MB and RAM low. The OpenAI client
+# comes in via langchain-openai above. Set EMBEDDINGS_PROVIDER=openai + an
+# OPENAI_API_KEY. (To run fully offline instead, install requirements-local.txt
+# which adds sentence-transformers + torch, and set EMBEDDINGS_PROVIDER=local.)
 
 # --- Document loading for the knowledge base ---
 pypdf==5.1.0

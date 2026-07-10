@@ -55,14 +55,14 @@ local model** so you can exercise the whole RAG pipeline without paying per toke
 - [ ] **Phase 5** — escalation hardening (contact capture form in the widget) + prod rate limiting
 - [ ] **Phase 6** — deploy to Render, HTTPS, locked CORS
 
-### Before Render deploy — known production TODOs
-- **DB schema:** switch `push: true` → generated migration files (`push` is dev-only, prompts interactively).
-- **Media/uploads storage:** uploaded images save to local `media/` (Render's disk is ephemeral — wiped each deploy). Use S3/Cloudflare R2 (`@payloadcms/storage-s3`) or a Render persistent disk.
-- **sharp:** Dockerfile already force-installs the Linux binary (needed for the container).
-- **Embedding model pre-download:** the chat uses `paraphrase-multilingual-MiniLM-L12-v2`
-  (~470MB, multilingual for Arabic+English). It downloads on first use — pre-download it
-  during the chat Docker build so the container doesn't stall/timeout on the first request.
-- **Env:** set `NEXT_PUBLIC_SERVER_URL`, `DATABASE_URI`, `PAYLOAD_SECRET`, chat keys as Render env vars; lock CORS to the real domain.
+### Production status / TODOs
+- ✅ **DB schema:** migration files generated; `push` off in prod (runs `payload migrate` at boot).
+- ✅ **Embeddings:** switched to hosted OpenAI (`text-embedding-3-small`, multilingual) — chat image is lean (no torch), fits small instances. Needs `OPENAI_API_KEY`.
+- ✅ **Restart-safe seed:** Brand/Nav only seed on first boot (hidden `seeded` flag), so restarts never reset customer edits. Pages live in the persistent DB volume.
+- ✅ **Prod stack:** `docker-compose.prod.yml` + Caddy (auto-HTTPS, one domain). See `VPS-DEPLOY.md`.
+- ⚠️ **DB backups (do before real launch):** nightly `pg_dump` of the Postgres volume. If the disk dies with no backup, data is lost. Not yet automated.
+- ⚠️ **Media/uploads storage:** images save to local `media/`. Persists on a VPS (real disk), but wiped on Render free (ephemeral). For heavy use → S3/Cloudflare R2 (`@payloadcms/storage-s3`).
+- **Env:** set `NEXT_PUBLIC_SERVER_URL`, `DATABASE_URI`, `PAYLOAD_SECRET`, `GROQ_API_KEY`, `OPENAI_API_KEY`, `ALLOWED_ORIGINS` per host; lock CORS to the real domain.
 
 ## Run locally (test it yourself / record a demo — $0)
 

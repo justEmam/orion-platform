@@ -46,5 +46,8 @@ export const Brand: GlobalConfig = {
         colorField('textMuted', 'Muted text', '#a2a6c4'),
       ],
     },
+    // Hidden flag: set true by the seed on first run so restarts never
+    // overwrite the customer's edits. Not shown in the admin.
+    { name: 'seeded', type: 'checkbox', admin: { hidden: true } },
   ],
 }

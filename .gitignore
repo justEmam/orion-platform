@@ -1,8 +1,14 @@
-# Secrets
+# Secrets — all env files except the .example templates
 .env
 */.env
+.env.prod
+*/.env.prod
+caddy.env
+db.env
 !.env.example
 !*/.env.example
+!*.env.example
+!*/*.env.example
 
 # Python
 __pycache__/

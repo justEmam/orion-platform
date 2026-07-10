@@ -35,5 +35,8 @@ export const Navigation: GlobalConfig = {
       ],
     },
     { name: 'copyright', type: 'text', defaultValue: '© 2026 Orion Media. Aim. Air. Amplify.' },
+    // Hidden flag: set true by the seed on first run so restarts never
+    // overwrite the customer's nav edits. Not shown in the admin.
+    { name: 'seeded', type: 'checkbox', admin: { hidden: true } },
   ],
 }

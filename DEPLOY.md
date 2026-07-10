@@ -30,7 +30,8 @@ git push -u origin main
 2. Connect the GitHub repo. Render reads `render.yaml` and shows 3 services +
    1 database (`orion-db`, `orion-chat`, `orion-cms`).
 3. Click **Apply**. It provisions the DB and starts building the two images.
-   (The chat image build is slow — it installs torch + pre-downloads the model.)
+   (The chat image is now lean — hosted OpenAI embeddings, no torch/model — so
+   it builds fast and fits small instances.)
 
 ## 3. Enable pgvector on the database (one-time)
 The chat stores embeddings via the `vector` extension. After `orion-db` is live:
@@ -45,7 +46,8 @@ keys stay out of git and so you can fill the real Render URLs. After the first
 build, note each service's URL (e.g. `https://orion-cms.onrender.com`), then:
 
 **orion-chat** → Environment:
-- `GROQ_API_KEY` = your Groq key
+- `GROQ_API_KEY` = your Groq key (chat replies)
+- `OPENAI_API_KEY` = your OpenAI key (embeddings — you have $5 free credit)
 - `ALLOWED_ORIGINS` = `https://orion-cms.onrender.com`  (the CMS URL)
 
 **orion-cms** → Environment:
