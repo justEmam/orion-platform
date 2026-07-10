@@ -1,0 +1,79 @@
+# ============================================================
+# Render Blueprint — provisions the whole Orion platform in one go.
+#
+# In Render: New → Blueprint → connect this repo → it reads THIS file and
+# creates all 3 services + the database, wiring their URLs together.
+#
+#   orion-db     Postgres (with pgvector) — shared by CMS + chat
+#   orion-chat   FastAPI agentic RAG service (chat/)
+#   orion-cms    Payload CMS + public site (cms/)
+#
+# Secrets marked `sync: false` are NOT stored here — you paste them into the
+# Render dashboard once (so keys never live in git).
+# ============================================================
+
+databases:
+  - name: orion-db
+    plan: free            # free Postgres (expires ~30 days; upgrade for real use)
+    postgresMajorVersion: "16"
+    # pgvector: enable the extension after first deploy via Render's DB shell:
+    #   CREATE EXTENSION IF NOT EXISTS vector;
+    # (see DEPLOY.md)
+
+services:
+  # ---------------- Chat service (Python / FastAPI) ----------------
+  - type: web
+    name: orion-chat
+    runtime: docker
+    plan: free            # NOTE: 512MB RAM on free — the ML model is tight here
+    dockerfilePath: ./chat/Dockerfile
+    dockerContext: ./chat
+    healthCheckPath: /health
+    envVars:
+      - key: CHAT_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false        # paste in dashboard
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: EMBEDDINGS_PROVIDER
+        value: local
+      # Shared DB — Render injects the connection string; chat needs the
+      # psycopg dialect prefix, so we build it from the DB's parts below.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orion-db
+          property: connectionString
+      - key: SUPPORT_EMAIL
+        value: hello@orionilam.com
+      - key: RATE_LIMIT
+        value: 20/minute
+      # Locked to the CMS/site origin (set after first deploy — see DEPLOY.md).
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  # ---------------- CMS + public site (Node / Next.js) ----------------
+  - type: web
+    name: orion-cms
+    runtime: docker
+    plan: free
+    dockerfilePath: ./cms/Dockerfile
+    dockerContext: ./cms
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URI
+        fromDatabase:
+          name: orion-db
+          property: connectionString
+      - key: PAYLOAD_SECRET
+        generateValue: true    # Render generates a strong random secret
+      # These are full URLs with a path (…/chat, …/ingest) — Render's
+      # `fromService host` only yields a bare hostname, so we set them by hand
+      # in the dashboard after the first deploy (see DEPLOY.md). Left as
+      # sync:false placeholders so the blueprint doesn't overwrite them.
+      - key: NEXT_PUBLIC_SERVER_URL
+        sync: false             # https://orion-cms.onrender.com
+      - key: NEXT_PUBLIC_CHAT_ENDPOINT
+        sync: false             # https://orion-chat.onrender.com/chat
+      - key: CHAT_INGEST_URL
+        sync: false             # https://orion-chat.onrender.com/ingest

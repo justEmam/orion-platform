@@ -1,0 +1,57 @@
+# ============================================================
+# Orion platform — runs the whole stack locally with ONE command:
+#
+#     docker compose up
+#
+# Then open:
+#     http://localhost:3001         the website
+#     http://localhost:3001/admin   the admin panel (client edits here)
+#     http://localhost:8000/health  the AI chat service
+#
+# Three containers, all on your machine (nothing is public, nothing is billed):
+#   db    Postgres + pgvector (shared by CMS content AND chat embeddings)
+#   chat  FastAPI agentic RAG service   (chat/)
+#   cms   Payload CMS + public site     (cms/)
+#
+# Before the first run: copy the two env templates (see README "Run locally").
+# ============================================================
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: orion
+      POSTGRES_PASSWORD: orion
+      POSTGRES_DB: orion
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chat:
+    build: ./chat
+    env_file: ./chat/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Payload CMS + public site (one Next.js app on :3001)
+  cms:
+    build: ./cms
+    env_file: ./cms/.env
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      chat:
+        condition: service_started
+
+volumes:
+  db_data:

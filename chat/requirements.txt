@@ -1,0 +1,37 @@
+# --- Web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-multipart==0.0.20          # file uploads for doc ingestion
+
+# --- LangChain (provider-agnostic core) ---
+langchain==0.3.14
+langchain-core==0.3.29
+langchain-community==0.3.14
+
+# --- Swappable model providers (install/enable per your keys) ---
+langchain-anthropic==0.3.1        # Claude
+langchain-groq==0.2.3             # Groq (free tier for testing)
+langchain-openai==0.2.14          # OpenAI-compatible + OpenAI embeddings option
+
+# --- Vector store (pgvector on the shared Postgres) ---
+langchain-postgres==0.0.13
+psycopg[binary]==3.2.3
+pgvector==0.3.6
+
+# --- Embeddings: local, multilingual (Arabic + English), runs offline. ---
+# sentence-transformers pulls torch; the Dockerfile installs the CPU-only torch
+# wheel to keep the image far smaller (no CUDA). The model itself is
+# pre-downloaded at build time (see Dockerfile) so the container never stalls on
+# the first request.
+sentence-transformers==3.3.1
+
+# --- Document loading for the knowledge base ---
+pypdf==5.1.0
+python-docx==1.1.2
+
+# --- Escalation email + misc ---
+httpx==0.28.1
+slowapi==0.1.9                    # rate limiting
+tenacity==9.0.0

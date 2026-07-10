@@ -1,0 +1,5 @@
+# Opt-in: fully-offline local embeddings (EMBEDDINGS_PROVIDER=local).
+# Adds ~2GB of torch/transformers. Only needed if you do NOT want to use the
+# free hosted Hugging Face embeddings (the default). Install on top of the base:
+#     pip install -r requirements.txt -r requirements-local.txt
+sentence-transformers==3.3.1
