@@ -1,4 +1,5 @@
 import type { GlobalConfig } from 'payload'
+import { isAdminOrEditor } from '../access'
 
 // A color field rendered with the clickable swatch picker (see
 // src/fields/ColorPicker.tsx). Stores a plain hex string.
@@ -24,14 +25,24 @@ const baseURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
 
 export const Brand: GlobalConfig = {
   slug: 'brand',
+  versions: { drafts: true }, // edit → Save Draft → Publish (like Pages)
+  access: { read: () => true, update: isAdminOrEditor },
   admin: {
-    // Live Preview: editing brand colors/logo shows the home page re-theming
-    // in a side-by-side pane.
     livePreview: { url: `${baseURL}/?preview=true` },
     preview: () => `${baseURL}/?preview=true`,
   },
   fields: [
     { name: 'logoText', type: 'text', defaultValue: 'ORION MEDIA' },
+    {
+      name: 'favicon',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Website icon (favicon)',
+      admin: {
+        description:
+          'The small icon in the browser tab. Upload a square PNG/ICO (32×32 or 64×64).',
+      },
+    },
     { name: 'ctaLabel', type: 'text', defaultValue: 'Start a Campaign' },
     { name: 'ctaHref', type: 'text', defaultValue: '#contact' },
     {

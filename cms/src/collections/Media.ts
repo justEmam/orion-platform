@@ -2,6 +2,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { CollectionConfig } from 'payload'
 
+import { isAdminOrEditor } from '../access'
+
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /**
@@ -14,7 +16,12 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
  */
 export const Media: CollectionConfig = {
   slug: 'media',
-  access: { read: () => true },
+  access: {
+    read: () => true, // public — images must load on the site
+    create: isAdminOrEditor,
+    update: isAdminOrEditor,
+    delete: isAdminOrEditor,
+  },
   upload: {
     staticDir: path.resolve(dirname, '../../media'),
     imageSizes: [

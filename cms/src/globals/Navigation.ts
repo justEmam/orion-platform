@@ -1,10 +1,13 @@
 import type { GlobalConfig } from 'payload'
+import { isAdminOrEditor } from '../access'
 
 const baseURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
 
 /** Nav + footer links and social — editable without touching code. */
 export const Navigation: GlobalConfig = {
   slug: 'navigation',
+  versions: { drafts: true }, // edit → Save Draft → Publish (like Pages)
+  access: { read: () => true, update: isAdminOrEditor },
   admin: {
     livePreview: { url: `${baseURL}/?preview=true` },
     preview: () => `${baseURL}/?preview=true`,

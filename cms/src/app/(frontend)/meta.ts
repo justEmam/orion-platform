@@ -15,15 +15,23 @@ const baseURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
 
 export async function buildMetadata(slug: string): Promise<Metadata> {
   let seo: any = null
+  let favicon: string | undefined
   try {
     const payload = await getPayload({ config })
-    const res = await payload.find({
-      collection: 'pages',
-      where: { slug: { equals: slug } },
-      limit: 1,
-      depth: 1, // resolve the shareImage upload so we get its URL
-    })
+    const [res, brand] = await Promise.all([
+      payload.find({
+        collection: 'pages',
+        where: { slug: { equals: slug } },
+        limit: 1,
+        depth: 1, // resolve the shareImage upload so we get its URL
+      }),
+      payload.findGlobal({ slug: 'brand', depth: 1 }),
+    ])
     seo = res.docs[0]?.seo || null
+    // Editable favicon from the Brand global (an uploaded Media doc).
+    if ((brand as any)?.favicon && typeof (brand as any).favicon === 'object') {
+      favicon = `${baseURL}${(brand as any).favicon.url}`
+    }
   } catch {
     // DB unreachable — fall back to sensible defaults below.
   }
@@ -40,6 +48,8 @@ export async function buildMetadata(slug: string): Promise<Metadata> {
   return {
     title,
     description,
+    // Editable favicon (from Brand). Falls back to Next/browser default if unset.
+    ...(favicon ? { icons: { icon: favicon } } : {}),
     openGraph: {
       title,
       description,

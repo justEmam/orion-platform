@@ -80,8 +80,11 @@ docker compose -f docker-compose.prod.yml logs -f
 ```
 
 ## 8. Done — visit your site
-- `https://yourdomain.com` — the live site (HTTPS, valid cert)
-- `https://yourdomain.com/admin` — first visit creates your admin account
+- `https://yourdomain.com` — the live site (HTTPS, valid cert), Home page
+  already seeded automatically
+- `https://yourdomain.com/admin` — log in with the `SEED_ADMIN_EMAIL` /
+  `SEED_ADMIN_PASSWORD` you set in `cms/.env.prod` (auto-created on first boot;
+  change the password in the admin afterwards)
 - `https://yourdomain.com/chat-api/health` — chat service health
 
 The customer edits pages, brand, navigation, and Knowledge Docs entirely from

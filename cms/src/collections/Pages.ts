@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { layoutBlocks } from '../blocks'
+import { isAdminOrEditor } from '../access'
 
 const baseURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
 
@@ -27,7 +28,12 @@ export const Pages: CollectionConfig = {
     // A "preview" button that opens the page in a new tab too.
     preview: (doc) => `${baseURL}${pathForSlug((doc as any)?.slug)}?preview=true`,
   },
-  access: { read: () => true },
+  access: {
+    read: () => true, // public — the site must render pages for visitors
+    create: isAdminOrEditor,
+    update: isAdminOrEditor,
+    delete: isAdminOrEditor,
+  },
   versions: { drafts: true },
   fields: [
     { name: 'title', type: 'text', required: true },

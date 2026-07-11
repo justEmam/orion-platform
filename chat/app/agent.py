@@ -67,6 +67,34 @@ def _history_messages(history: list[ChatTurn], settings: Settings):
     return out
 
 
+REWRITE_PROMPT = """Given the conversation so far and the visitor's latest \
+message, rewrite the latest message into a single, standalone question that \
+makes sense on its own (resolve pronouns like "it"/"that", carry over the \
+topic). Keep the SAME language as the visitor. Output ONLY the rewritten \
+question, nothing else."""
+
+
+def _rewrite_query(
+    model: BaseChatModel, message: str, history: list[ChatTurn]
+) -> str:
+    """Turn a context-dependent follow-up ("and how long?") into a standalone
+    question ("how long does TV commercial production take?") so retrieval
+    works. Only called when there IS prior conversation. Best-effort: on any
+    failure we fall back to the original message."""
+    try:
+        convo = "\n".join(f"{t.role}: {t.content}" for t in history[-6:])
+        result = model.invoke(
+            [
+                SystemMessage(content=REWRITE_PROMPT),
+                HumanMessage(content=f"Conversation:\n{convo}\n\nLatest: {message}"),
+            ]
+        )
+        rewritten = (result.content or "").strip()
+        return rewritten or message
+    except Exception:
+        return message
+
+
 def generate_reply(
     settings: Settings,
     model: BaseChatModel,
@@ -76,8 +104,15 @@ def generate_reply(
 ) -> Reply:
     message = message[: settings.max_message_length].strip()
 
-    # 1. Retrieve
-    hits = retrieve(settings, message)
+    # 0. Query rewriting — ONLY for follow-ups (when there's prior history), so
+    # first messages pay no extra LLM call. Improves retrieval on questions
+    # like "and the price?" that depend on earlier context.
+    search_query = message
+    if history:
+        search_query = _rewrite_query(model, message, history)
+
+    # 1. Retrieve (use the standalone/rewritten query)
+    hits = retrieve(settings, search_query)
     relevant = [(doc, score) for doc, score in hits if score >= settings.min_relevance_score]
 
     # 2. Hard escalation: nothing relevant in the knowledge base

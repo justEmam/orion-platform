@@ -16,7 +16,7 @@ import config from '../../payload.config'
 import { RenderBlocks } from './blocks'
 import { Background, Header, Footer } from './SiteChrome'
 import ChatWidget from './ChatWidget'
-import LivePreviewShell from './LivePreviewShell'
+import { RefreshOnSave } from './RefreshOnSave'
 import { BrandStyle } from './BrandStyle'
 import { seedLayout, seedBrand, seedNav } from './seed'
 import './theme.css'
@@ -25,24 +25,30 @@ export async function renderPage(slug: string, preview = false) {
   let page: any = null // full page doc (needed by live preview)
   let brand: any = seedBrand
   let nav: any = seedNav
+  let chat: any = {}
 
   try {
     const payload = await getPayload({ config })
-    const [pages, brandG, navG] = await Promise.all([
+    const [pages, brandG, navG, chatG] = await Promise.all([
       payload.find({
         collection: 'pages',
         where: { slug: { equals: slug } },
         limit: 1,
+        // depth must match the useLivePreview hook (2) or live updates silently
+        // fail to apply.
+        depth: 2,
         // In preview, include unpublished drafts so the client sees edits
         // before they hit Publish.
         draft: preview,
       }),
-      payload.findGlobal({ slug: 'brand', draft: preview }),
-      payload.findGlobal({ slug: 'navigation', draft: preview }),
+      payload.findGlobal({ slug: 'brand', depth: 2, draft: preview }),
+      payload.findGlobal({ slug: 'navigation', depth: 2, draft: preview }),
+      payload.findGlobal({ slug: 'chat', depth: 2, draft: preview }),
     ])
     if (pages.docs[0]) page = pages.docs[0]
     if (brandG) brand = { ...seedBrand, ...(brandG as any) }
     if (navG) nav = { ...seedNav, ...(navG as any) }
+    if (chatG) chat = chatG
   } catch {
     // DB unreachable — only the home page has a safe seed fallback.
   }
@@ -56,21 +62,12 @@ export async function renderPage(slug: string, preview = false) {
     else notFound()
   }
 
-  // Preview mode (inside the admin pane): render the fully-live shell that
-  // updates as the client edits the page, brand colors/logo, OR navigation.
-  if (preview) {
-    return (
-      <LivePreviewShell
-        initialLayout={layout}
-        initialBrand={brand}
-        initialNav={nav}
-      />
-    )
-  }
-
-  // Normal public render — static.
+  // Same render for public AND preview. In preview mode we add RefreshOnSave,
+  // which reliably refreshes the preview pane when the client hits Save — the
+  // stable, WordPress-like behavior (no fragile as-you-type re-fetching).
   return (
     <>
+      {preview && <RefreshOnSave />}
       <BrandStyle colors={brand.colors} />
       <Background />
       <Header
@@ -82,7 +79,7 @@ export async function renderPage(slug: string, preview = false) {
         <RenderBlocks layout={layout} />
       </main>
       <Footer logo={brand.logoText} social={nav.social} copyright={nav.copyright} />
-      <ChatWidget />
+      <ChatWidget settings={chat} />
     </>
   )
 }

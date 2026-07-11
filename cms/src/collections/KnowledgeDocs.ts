@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { isAdminOrEditor } from '../access'
 
 /**
  * KnowledgeDocs — the bridge between "editable content" and "what the AI knows".
@@ -11,6 +12,12 @@ import type { CollectionConfig } from 'payload'
  */
 export const KnowledgeDocs: CollectionConfig = {
   slug: 'knowledge-docs',
+  access: {
+    read: isAdminOrEditor,
+    create: isAdminOrEditor,
+    update: isAdminOrEditor,
+    delete: isAdminOrEditor,
+  },
   admin: {
     useAsTitle: 'title',
     description: 'Documents the support assistant is allowed to answer from.',

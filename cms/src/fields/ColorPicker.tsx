@@ -8,10 +8,15 @@
 import React from 'react'
 import { useField } from '@payloadcms/ui'
 
-export const ColorPicker: React.FC<{ path: string; field?: any }> = ({ path, field }) => {
+export const ColorPicker: React.FC<{ path: string; field?: any; clientField?: any }> = ({
+  path,
+  field,
+  clientField,
+}) => {
   const { value, setValue } = useField<string>({ path })
   const hex = (value as string) || '#000000'
-  const label = field?.label || field?.name || path
+  // Payload v3 passes the field as `clientField` in client components.
+  const label = clientField?.label || field?.label || path
 
   return (
     <div className="field-type" style={{ marginBottom: 20 }}>
@@ -22,6 +27,9 @@ export const ColorPicker: React.FC<{ path: string; field?: any }> = ({ path, fie
         <input
           type="color"
           value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#000000'}
+          // onInput fires continuously as you drag in the OS picker, so the
+          // hex box + round swatch update live; onChange commits the final pick.
+          onInput={(e) => setValue((e.target as HTMLInputElement).value)}
           onChange={(e) => setValue(e.target.value)}
           style={{
             width: 44,

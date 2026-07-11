@@ -11,6 +11,7 @@ import { KnowledgeDocs } from './collections/KnowledgeDocs'
 import { Users } from './collections/Users'
 import { Brand } from './globals/Brand'
 import { Navigation } from './globals/Navigation'
+import { Chat } from './globals/Chat'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -18,7 +19,7 @@ export default buildConfig({
   admin: { user: Users.slug },
   editor: lexicalEditor(),
   collections: [Pages, Media, KnowledgeDocs, Users],
-  globals: [Brand, Navigation],
+  globals: [Brand, Navigation, Chat],
   secret: process.env.PAYLOAD_SECRET || '',
   sharp, // enables image uploads + resizing in the Media library
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
