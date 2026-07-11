@@ -1,63 +1,69 @@
 """
-Knowledge base: ingest admin-uploaded docs into pgvector, and retrieve
-relevant chunks at query time.
+Knowledge store — plain text, NO embeddings/RAG.
 
-The store is the same Postgres the CMS uses, in its own set of tables managed
-by langchain-postgres (PGVector). Admins upload docs from the panel -> the CMS
-POSTs the file text to /ingest here -> it's chunked, embedded and stored.
+For a small fixed FAQ (10-15 Q&As) we skip vector search entirely and instead
+"prompt-stuff": store each doc's raw text, and hand ALL of them to the model on
+every message. Simpler, more accurate at this scale, and needs no embedding
+model or pgvector.
+
+Docs live in a simple table `chat_knowledge(source TEXT PRIMARY KEY, text TEXT)`.
+The CMS POSTs each doc to /ingest on save (upsert by source).
 """
 from __future__ import annotations
 
-from langchain_core.documents import Document
-from langchain_postgres import PGVector
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import psycopg
 
 from .config import Settings
-from .providers import build_embeddings
-
-COLLECTION = "orion_knowledge"
 
 
-def get_vector_store(settings: Settings) -> PGVector:
-    return PGVector(
-        embeddings=build_embeddings(settings),
-        collection_name=COLLECTION,
-        connection=settings.sqlalchemy_url,
-        use_jsonb=True,
+def _connect(settings: Settings):
+    # psycopg wants a plain postgresql:// URL (strip any +psycopg dialect part).
+    url = settings.sqlalchemy_url.replace("postgresql+psycopg://", "postgresql://")
+    return psycopg.connect(url)
+
+
+def _ensure_table(cur) -> None:
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_knowledge (
+            source TEXT PRIMARY KEY,
+            text   TEXT NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT now()
+        )
+        """
     )
 
 
 def ingest_text(settings: Settings, *, source: str, text: str) -> int:
-    """Chunk + embed a document. `source` is a stable id (filename / CMS doc id)
-    so re-uploading the same doc replaces its old chunks instead of duplicating.
-    Returns the number of chunks stored."""
-    store = get_vector_store(settings)
-
-    # Replace any prior version of this source.
-    try:
-        store.delete(filter={"source": source})
-    except Exception:
-        pass  # nothing to delete on first ingest
-
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800, chunk_overlap=120
-    )
-    chunks = splitter.split_text(text)
-    docs = [
-        Document(page_content=c, metadata={"source": source, "chunk": i})
-        for i, c in enumerate(chunks)
-    ]
-    if docs:
-        store.add_documents(docs)
-    return len(docs)
+    """Upsert one doc by `source`. Returns 1 (docs, not chunks — no chunking)."""
+    with _connect(settings) as conn, conn.cursor() as cur:
+        _ensure_table(cur)
+        cur.execute(
+            """
+            INSERT INTO chat_knowledge (source, text, updated_at)
+            VALUES (%s, %s, now())
+            ON CONFLICT (source) DO UPDATE
+              SET text = EXCLUDED.text, updated_at = now()
+            """,
+            (source, text),
+        )
+        conn.commit()
+    return 1
 
 
-def retrieve(settings: Settings, query: str) -> list[tuple[Document, float]]:
-    """Return (document, relevance_score) pairs, highest relevance first.
-    Score is normalized 0..1 (1 = most relevant)."""
-    store = get_vector_store(settings)
-    # returns (doc, distance); convert distance -> similarity for a friendly score
-    results = store.similarity_search_with_relevance_scores(
-        query, k=settings.retrieval_k
-    )
-    return results
+def delete_doc(settings: Settings, *, source: str) -> None:
+    """Remove a doc (called when the CMS deletes a knowledge doc)."""
+    with _connect(settings) as conn, conn.cursor() as cur:
+        _ensure_table(cur)
+        cur.execute("DELETE FROM chat_knowledge WHERE source = %s", (source,))
+        conn.commit()
+
+
+def all_knowledge(settings: Settings) -> str:
+    """Return ALL knowledge docs concatenated — the full FAQ to stuff into the
+    prompt. Empty string if there are none."""
+    with _connect(settings) as conn, conn.cursor() as cur:
+        _ensure_table(cur)
+        cur.execute("SELECT text FROM chat_knowledge ORDER BY source")
+        rows = cur.fetchall()
+    return "\n\n---\n\n".join(r[0] for r in rows if r[0])

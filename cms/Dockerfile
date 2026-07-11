@@ -14,6 +14,12 @@ RUN npm install \
  && npm install --os=linux --libc=glibc --cpu=x64 sharp@0.34.2
 
 COPY . .
+# NEXT_PUBLIC_* vars are baked into the browser bundle at BUILD time, so they
+# must be present here — not just at runtime. Passed as build args from compose.
+ARG NEXT_PUBLIC_SERVER_URL
+ARG NEXT_PUBLIC_CHAT_ENDPOINT
+ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
+ENV NEXT_PUBLIC_CHAT_ENDPOINT=$NEXT_PUBLIC_CHAT_ENDPOINT
 RUN npm run build
 
 # Seed + migrate on startup, then launch (see docker-entrypoint.sh).

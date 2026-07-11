@@ -64,6 +64,48 @@ export const Chat: GlobalConfig = {
     },
     {
       type: 'collapsible',
+      label: 'Pre-chat contact form',
+      fields: [
+        {
+          name: 'contactIntro',
+          type: 'textarea',
+          label: 'Intro text',
+          defaultValue: 'Please introduce yourself so our team can follow up:',
+        },
+        {
+          name: 'contactFields',
+          type: 'array',
+          label: 'Form fields',
+          admin: {
+            description:
+              'Fields the visitor fills before chatting. Add/remove/reorder. ' +
+              'Mark which are required. (Name + Email are recommended for follow-up.)',
+          },
+          fields: [
+            { name: 'label', type: 'text', required: true, label: 'Field label' },
+            {
+              name: 'type',
+              type: 'select',
+              defaultValue: 'text',
+              options: [
+                { label: 'Text', value: 'text' },
+                { label: 'Email', value: 'email' },
+              ],
+            },
+            { name: 'required', type: 'checkbox', defaultValue: true },
+          ],
+          defaultValue: [
+            { label: 'Name', type: 'text', required: true },
+            { label: 'Email', type: 'email', required: true },
+            { label: 'Company', type: 'text', required: true },
+            { label: 'Job title', type: 'text', required: true },
+          ],
+        },
+        { name: 'startButtonLabel', type: 'text', defaultValue: 'Start chat' },
+      ],
+    },
+    {
+      type: 'collapsible',
       label: 'Colors',
       fields: [
         colorField('launcherColor', 'Chat bubble color', '#4c7cff'),
@@ -72,6 +114,8 @@ export const Chat: GlobalConfig = {
         colorField('userBubbleColor', 'Your-message bubble color', '#4c7cff'),
         colorField('botBubbleColor', 'Assistant reply bubble', '#1a1f3d'),
         colorField('textColor', 'Text color', '#f5f6fb'),
+        colorField('startButtonColor', 'Start-chat button color', '#4c7cff'),
+        colorField('startButtonTextColor', 'Start-chat button text', '#ffffff'),
       ],
     },
     // Hidden: seeded flag so restarts don't reset customer edits.

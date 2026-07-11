@@ -3,34 +3,19 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
-python-multipart==0.0.20          # file uploads for doc ingestion
 
 # --- LangChain (provider-agnostic core) ---
 langchain==0.3.14
 langchain-core==0.3.29
-langchain-community==0.3.14
 
-# --- Swappable model providers (install/enable per your keys) ---
-langchain-anthropic==0.3.1        # Claude
-langchain-groq==0.2.3             # Groq (free tier for testing)
-langchain-openai==0.2.14          # OpenAI-compatible + OpenAI embeddings option
+# --- Swappable chat providers (pick one via CHAT_PROVIDER) ---
+langchain-openai==0.2.14          # OpenAI (default: gpt-4o-mini)
+langchain-anthropic==0.3.1        # Claude (1-line swap)
+langchain-groq==0.2.3             # Groq (1-line swap)
 
-# --- Vector store (pgvector on the shared Postgres) ---
-langchain-postgres==0.0.13
+# --- Postgres (plain knowledge table + escalation store; NO pgvector/RAG) ---
 psycopg[binary]==3.2.3
-pgvector==0.3.6
 
-# --- Embeddings: hosted via OpenAI (text-embedding-3-small, multilingual). ---
-# No local ML stack — keeps the image ~200MB and RAM low. The OpenAI client
-# comes in via langchain-openai above. Set EMBEDDINGS_PROVIDER=openai + an
-# OPENAI_API_KEY. (To run fully offline instead, install requirements-local.txt
-# which adds sentence-transformers + torch, and set EMBEDDINGS_PROVIDER=local.)
-
-# --- Document loading for the knowledge base ---
-pypdf==5.1.0
-python-docx==1.1.2
-
-# --- Escalation email + misc ---
+# --- HTTP (escalations -> CMS) + rate limiting ---
 httpx==0.28.1
-slowapi==0.1.9                    # rate limiting
-tenacity==9.0.0
+slowapi==0.1.9

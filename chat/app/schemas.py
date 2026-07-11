@@ -9,8 +9,13 @@ class Turn(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     history: list[Turn] = Field(default_factory=list)
+    # Contact info collected by the widget's required pre-chat form.
     visitor_name: str | None = None
     visitor_email: str | None = None
+    visitor_company: str | None = None
+    visitor_job: str | None = None
+    # All form fields as "Label: value" lines (supports custom/added fields).
+    visitor_details: str | None = None
 
 
 class ChatResponse(BaseModel):

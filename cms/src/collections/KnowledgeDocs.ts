@@ -33,6 +33,8 @@ export const KnowledgeDocs: CollectionConfig = {
     },
   ],
   hooks: {
+    // On save -> push the raw Q&A text to the chat service (it stores it for
+    // prompt-stuffing). On delete -> tell the chat service to drop it.
     afterChange: [
       async ({ doc }) => {
         const url = process.env.CHAT_INGEST_URL
@@ -47,9 +49,23 @@ export const KnowledgeDocs: CollectionConfig = {
             }),
           })
         } catch (err) {
-          // Non-fatal: saving the doc must succeed even if the chat service
-          // is momentarily down. A re-save re-ingests.
           console.error('Knowledge ingest failed:', err)
+        }
+        return doc
+      },
+    ],
+    afterDelete: [
+      async ({ doc }) => {
+        const base = process.env.CHAT_INGEST_URL
+        if (!base) return doc
+        try {
+          await fetch(base.replace(/\/ingest$/, '/ingest/delete'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: `knowledge-doc:${doc.id}` }),
+          })
+        } catch (err) {
+          console.error('Knowledge delete failed:', err)
         }
         return doc
       },

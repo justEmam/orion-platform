@@ -8,6 +8,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { Pages } from './collections/Pages'
 import { Media } from './collections/Media'
 import { KnowledgeDocs } from './collections/KnowledgeDocs'
+import { Escalations } from './collections/Escalations'
 import { Users } from './collections/Users'
 import { Brand } from './globals/Brand'
 import { Navigation } from './globals/Navigation'
@@ -18,7 +19,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 export default buildConfig({
   admin: { user: Users.slug },
   editor: lexicalEditor(),
-  collections: [Pages, Media, KnowledgeDocs, Users],
+  collections: [Pages, Media, KnowledgeDocs, Escalations, Users],
   globals: [Brand, Navigation, Chat],
   secret: process.env.PAYLOAD_SECRET || '',
   sharp, // enables image uploads + resizing in the Media library

@@ -33,7 +33,13 @@ services:
       - chat
 
   cms:
-    build: ./cms
+    build:
+      context: ./cms
+      args:
+        # NEXT_PUBLIC_* must be baked in at build time (they end up in the
+        # browser bundle). Read from cms/.env.prod via ${...}.
+        NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL:-http://localhost}
+        NEXT_PUBLIC_CHAT_ENDPOINT: ${NEXT_PUBLIC_CHAT_ENDPOINT:-http://localhost/chat-api/chat}
     restart: unless-stopped
     env_file: ./cms/.env.prod
     expose:

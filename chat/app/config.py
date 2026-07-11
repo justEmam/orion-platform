@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # --- Which LLM provider to use for chat replies ---------------------
     # "anthropic" -> Claude | "groq" -> Groq free tier | "openai" -> OpenAI
-    chat_provider: Literal["anthropic", "groq", "openai"] = "anthropic"
+    chat_provider: Literal["anthropic", "groq", "openai"] = "openai"
 
     # Per-provider model + key. Only the active provider's key is required.
     anthropic_api_key: str | None = None
@@ -31,28 +31,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
-    # --- Embeddings -----------------------------------------------------
-    # "openai" -> hosted, multilingual (Arabic+English), tiny image [default]
-    # "hf"     -> Hugging Face Inference API (unreliable free tier — avoid)
-    # "local"  -> in-container sentence-transformers (~2GB torch; opt-in via
-    #             requirements-local.txt)
-    embeddings_provider: Literal["openai", "hf", "local"] = "openai"
-    hf_api_key: str | None = None
-    hf_embeddings_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    openai_embeddings_model: str = "text-embedding-3-small"
-    # Multilingual model — understands Arabic (incl. synonyms & dialect) and
-    # English. Bigger than all-MiniLM but far better for a bilingual site.
-    local_embeddings_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # (No embeddings — the chat prompt-stuffs all FAQ docs. See knowledge.py.)
 
-    # --- Generation limits (ported from the customer's original chat.js) -
+    # --- Generation limits ----------------------------------------------
     max_tokens: int = 400
     max_history_turns: int = 6
     max_message_length: int = 800
-    retrieval_k: int = 4               # chunks pulled from the vector store
-    min_relevance_score: float = 0.15  # below this -> escalate to a human
-    # ^ lowered: casual phrasings ("what do you guys do") still match the docs
-    #   instead of wrongly escalating. The grounded prompt still refuses to
-    #   answer anything not actually supported by the retrieved text.
 
     # --- Database (shared with the CMS; separate schema for vectors) -----
     database_url: str = "postgresql+psycopg://orion:orion@db:5432/orion"
@@ -70,12 +54,17 @@ class Settings(BaseSettings):
         return url
 
     # --- Escalation / human handoff -------------------------------------
+    # Escalations are SAVED TO THE CMS (shown in the admin), not emailed.
     support_email: str = "hello@orionilam.com"
-    smtp_host: str | None = None
-    smtp_port: int = 587
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    slack_webhook_url: str | None = None  # optional extra ping
+    # CMS endpoint that creates an Escalation record (the collection's REST API).
+    cms_escalation_url: str | None = "http://cms:3001/api/escalations"
+    # Optional API key if the collection's create is protected.
+    cms_escalation_token: str | None = None
+    # The reply shown to the visitor when escalated.
+    escalation_reply: str = (
+        "Thanks — I've noted your question and our team will contact you by "
+        "email within 1–2 hours."
+    )
 
     # --- Security -------------------------------------------------------
     allowed_origins: str = "http://localhost:3000"  # comma-separated
