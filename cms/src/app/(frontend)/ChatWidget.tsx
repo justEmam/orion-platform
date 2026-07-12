@@ -11,6 +11,44 @@ const ENDPOINT = process.env.NEXT_PUBLIC_CHAT_ENDPOINT || 'http://localhost:8000
 
 type Msg = { role: 'user' | 'assistant'; text: string }
 
+/** Escape HTML so user/model text can't inject markup (XSS-safe). */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/**
+ * Tiny, safe Markdown → HTML for bot replies. Handles the common things the
+ * model emits: **bold**, *italic*, `code`, links, and - / * / 1. bullet lists.
+ * Escapes HTML first, so this can never inject markup. No external library.
+ */
+function renderMarkdown(raw: string): string {
+  const inline = (t: string) =>
+    escapeHtml(t)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+
+  const lines = raw.split('\n')
+  let html = ''
+  let inList = false
+  for (const line of lines) {
+    const li = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/)
+    if (li) {
+      if (!inList) { html += '<ul>'; inList = true }
+      html += `<li>${inline(li[1])}</li>`
+    } else {
+      if (inList) { html += '</ul>'; inList = false }
+      if (line.trim()) html += `<p>${inline(line)}</p>`
+    }
+  }
+  if (inList) html += '</ul>'
+  return html
+}
+
 // Editable settings from the CMS Chat global (all optional — defaults below).
 type ContactField = { label: string; type?: 'text' | 'email'; required?: boolean }
 
@@ -297,7 +335,14 @@ export default function ChatWidget({ settings = {} }: { settings?: ChatSettings 
                         }
                   }
                 >
-                  {m.text}
+                  {m.role === 'user' ? (
+                    m.text
+                  ) : (
+                    <div
+                      className="msg-md"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }}
+                    />
+                  )}
                 </div>
               ))}
               {typing && <div className="typing"><span /><span /><span /></div>}
