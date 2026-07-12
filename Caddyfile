@@ -4,12 +4,14 @@
 # (via Let's Encrypt) and routes traffic:
 #   yourdomain.com/chat-api/*  -> the chat service (path stripped)
 #   yourdomain.com/*           -> the site + admin (Payload/Next.js)
+#   www.yourdomain.com         -> redirect to yourdomain.com
 #
 # Everything is same-origin (one domain), so there are no CORS problems.
 #
-# {$SITE_DOMAIN} is filled from the environment (Caddyfile supports env vars):
-#   - on the VPS:  SITE_DOMAIN=yourdomain.com   -> real HTTPS cert
-#   - locally:     SITE_DOMAIN=http://localhost -> plain HTTP for testing
+# Env vars (set in caddy.env):
+#   SITE_DOMAIN  — on the VPS: yourdomain.com   | locally: http://localhost
+#   WWW_DOMAIN   — on the VPS: www.yourdomain.com (needs its own DNS record!)
+#                  locally: leave unset (harmless default below)
 
 {$SITE_DOMAIN} {
 	# Chat API — strip the /chat-api prefix, forward the rest to the chat service.
@@ -19,6 +21,24 @@
 
 	# Everything else -> the CMS + public site.
 	handle {
+		# SECURITY: creating escalation records is reserved for the internal
+		# chat service (which posts directly to cms:3001, bypassing Caddy).
+		# Block public POSTs so bots can't spam the Escalations panel.
+		# GET/PATCH/DELETE stay open — the admin UI needs them (list / mark
+		# handled), and Payload's own auth protects those.
+		@escalationsCreate {
+			path /api/escalations /api/escalations/*
+			method POST
+		}
+		respond @escalationsCreate "Not found" 404
+
 		reverse_proxy cms:3001
 	}
+}
+
+# www -> apex redirect. On the VPS set WWW_DOMAIN=www.yourdomain.com in
+# caddy.env AND add a DNS A record for "www" pointing at the same server.
+# The local default resolves to a hostname nobody uses, so it's inert in dev.
+{$WWW_DOMAIN:http://www.localhost} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
 }

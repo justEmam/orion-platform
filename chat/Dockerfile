@@ -18,4 +18,7 @@ RUN pip install --upgrade pip \
 COPY app ./app
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers + trust Caddy: makes request.client.host the REAL visitor IP
+# (from X-Forwarded-For) so per-IP rate limiting works behind the reverse proxy.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]

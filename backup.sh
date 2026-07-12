@@ -1,0 +1,38 @@
+#!/bin/sh
+# ============================================================
+# Nightly backup: database dump + uploaded media, timestamped,
+# keeping the last 14 of each. Run from the project root.
+#
+# Manual run:   ./backup.sh
+# Nightly cron: crontab -e   then add:
+#   0 3 * * * cd /root/orion-platform && ./backup.sh >> backups/backup.log 2>&1
+#
+# IMPORTANT — OFF-SITE: backups in ./backups live on the SAME disk as the
+# server. They protect against mistakes (bad edit, accidental delete) but NOT
+# against disk failure or the VPS being deleted. Regularly copy them off the
+# server — either download them (scp) or sync to a free bucket, e.g.:
+#   rclone copy backups/ r2:orion-backups   (Cloudflare R2 free tier)
+# ============================================================
+set -e
+cd "$(dirname "$0")"
+
+# DB credentials from db.env (POSTGRES_USER / POSTGRES_DB)
+. ./db.env
+
+STAMP=$(date +%F_%H%M)
+mkdir -p backups
+
+# 1. Database — everything: pages, escalations, knowledge docs, users, chat FAQ.
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "backups/db-$STAMP.sql.gz"
+
+# 2. Uploaded media (favicon, share images, media library).
+docker compose -f docker-compose.prod.yml exec -T cms \
+  tar -C /app -czf - media > "backups/media-$STAMP.tar.gz" 2>/dev/null || \
+  echo "(no media dir yet — skipped media backup)"
+
+# 3. Retention: keep the newest 14 of each, delete older.
+ls -1t backups/db-*.sql.gz    2>/dev/null | tail -n +15 | xargs -r rm --
+ls -1t backups/media-*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm --
+
+echo "$(date '+%F %T') backup OK: db-$STAMP.sql.gz ($(du -h "backups/db-$STAMP.sql.gz" | cut -f1))"

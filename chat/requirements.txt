@@ -16,6 +16,6 @@ langchain-groq==0.2.3             # Groq (1-line swap)
 # --- Postgres (plain knowledge table + escalation store; NO pgvector/RAG) ---
 psycopg[binary]==3.2.3
 
-# --- HTTP (escalations -> CMS) + rate limiting ---
+# --- HTTP (escalations -> CMS) ---
 httpx==0.28.1
-slowapi==0.1.9
+# (rate limiting is a small custom per-IP limiter, see app/ratelimit.py — no dep)

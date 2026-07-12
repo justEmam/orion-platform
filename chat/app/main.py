@@ -13,17 +13,15 @@ needed to swap it.
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 
 from .agent import ChatTurn, generate_reply
 from .config import get_settings
 from .escalation import escalate
 from .knowledge import ingest_text, delete_doc
 from .providers import build_chat_model
+from .ratelimit import RateLimiter, client_ip, parse_rate
 from .schemas import (
     ChatRequest,
     ChatResponse,
@@ -32,15 +30,13 @@ from .schemas import (
 )
 
 settings = get_settings()
-limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit])
+
+# Per-IP rate limiter for /chat (the LLM-cost endpoint). Custom + tiny so it's
+# reliable and truly per-visitor — see ratelimit.py.
+_limit, _window = parse_rate(settings.rate_limit)
+chat_limiter = RateLimiter(limit=_limit, window_seconds=_window)
 
 app = FastAPI(title="Orion Chat Service", version="0.1.0")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-# Apply the default rate limit globally via middleware (not a per-route
-# decorator — decorating the route wraps its signature and breaks FastAPI's
-# Pydantic body detection).
-app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +56,13 @@ def health():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: Request, payload: ChatRequest):
+    # Per-IP rate limit (plain check — never touches body parsing).
+    if not chat_limiter.allow(client_ip(request)):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Please slow down."},
+        )
+
     history = [ChatTurn(role=t.role, content=t.content) for t in payload.history]
     reply = generate_reply(
         settings, chat_model, message=payload.message, history=history

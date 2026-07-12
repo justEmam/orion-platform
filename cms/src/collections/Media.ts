@@ -1,18 +1,15 @@
 import path from 'path'
-import { fileURLToPath } from 'url'
 import type { CollectionConfig } from 'payload'
 
 import { isAdminOrEditor } from '../access'
 
-const dirname = path.dirname(fileURLToPath(import.meta.url))
-
 /**
  * Media library — logos and images the client uploads and reuses.
  *
- * NOTE (production): files save to the local `media/` folder. On Render's free
- * tier the disk is EPHEMERAL — uploads are wiped on each deploy/restart. Fine
- * for a click-around demo. Before real launch, switch to cloud storage
- * (@payloadcms/storage-s3 → S3 / Cloudflare R2) or a Render persistent disk.
+ * Uploads land in <cwd>/media — i.e. /app/media in the container, which
+ * docker-compose.prod.yml mounts as the named volume `cms_media`, so uploaded
+ * files SURVIVE container rebuilds/redeploys. (cwd-based on purpose: a path
+ * derived from import.meta.url is unpredictable after Next bundles the config.)
  */
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -23,7 +20,7 @@ export const Media: CollectionConfig = {
     delete: isAdminOrEditor,
   },
   upload: {
-    staticDir: path.resolve(dirname, '../../media'),
+    staticDir: path.resolve(process.cwd(), 'media'),
     imageSizes: [
       { name: 'thumbnail', width: 400 },
       { name: 'card', width: 900 },

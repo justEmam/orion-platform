@@ -42,6 +42,10 @@ services:
         NEXT_PUBLIC_CHAT_ENDPOINT: ${NEXT_PUBLIC_CHAT_ENDPOINT:-http://localhost/chat-api/chat}
     restart: unless-stopped
     env_file: ./cms/.env.prod
+    volumes:
+      # Uploaded images (favicon, share image, media library) live OUTSIDE the
+      # container so rebuilds/redeploys never wipe the customer's uploads.
+      - cms_media:/app/media
     expose:
       - "3001"
     depends_on:
@@ -80,3 +84,4 @@ volumes:
   db_data:
   caddy_data:
   caddy_config:
+  cms_media:

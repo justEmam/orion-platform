@@ -57,12 +57,16 @@ local model** so you can exercise the whole RAG pipeline without paying per toke
 
 ### Production status / TODOs
 - ✅ **DB schema:** migration files generated; `push` off in prod (runs `payload migrate` at boot).
-- ✅ **Embeddings:** switched to hosted OpenAI (`text-embedding-3-small`, multilingual) — chat image is lean (no torch), fits small instances. Needs `OPENAI_API_KEY`.
-- ✅ **Restart-safe seed:** Brand/Nav only seed on first boot (hidden `seeded` flag), so restarts never reset customer edits. Pages live in the persistent DB volume.
-- ✅ **Prod stack:** `docker-compose.prod.yml` + Caddy (auto-HTTPS, one domain). See `VPS-DEPLOY.md`.
-- ⚠️ **DB backups (do before real launch):** nightly `pg_dump` of the Postgres volume. If the disk dies with no backup, data is lost. Not yet automated.
-- ⚠️ **Media/uploads storage:** images save to local `media/`. Persists on a VPS (real disk), but wiped on Render free (ephemeral). For heavy use → S3/Cloudflare R2 (`@payloadcms/storage-s3`).
-- **Env:** set `NEXT_PUBLIC_SERVER_URL`, `DATABASE_URI`, `PAYLOAD_SECRET`, `GROQ_API_KEY`, `OPENAI_API_KEY`, `ALLOWED_ORIGINS` per host; lock CORS to the real domain.
+- ✅ **Chat:** prompt-stuffing (no RAG/embeddings/pgvector) — lean image; provider is a 1-line swap (Groq for testing → customer's OpenAI/Anthropic at launch).
+- ✅ **Restart-safe seed:** Home/Brand/Nav only seed on first boot; restarts never reset customer edits.
+- ✅ **Prod stack:** `docker-compose.prod.yml` + Caddy (auto-HTTPS, apex + www redirect). See `VPS-DEPLOY.md`.
+- ✅ **Backups:** `backup.sh` (nightly cron: DB dump + media, 14-day retention) + tested `restore.sh`. Off-site copies documented in VPS-DEPLOY.md — still do those.
+- ✅ **Media/uploads:** persisted in the `cms_media` volume — rebuilds/redeploys never wipe uploads.
+- ✅ **Escalations spam guard:** public `POST /api/escalations` blocked at Caddy (only the internal chat service can create records).
+- ✅ **Rate limiting:** custom per-IP sliding-window limiter on `/chat` (unit-tested; reads the real client IP behind Caddy).
+- ⚠️ **Off-site backup copies:** local backups don't survive disk loss — `scp` them down or rclone→R2 periodically (see VPS-DEPLOY.md §9).
+- ⚠️ **Email adapter:** admin "forgot password" emails can't send yet (harmless log warning). Add an SMTP/Resend adapter if the customer wants self-service resets.
+- **Env:** set `NEXT_PUBLIC_SERVER_URL`, `DATABASE_URI`, `PAYLOAD_SECRET`, LLM key, `ALLOWED_ORIGINS` per host; lock CORS to the real domain.
 
 ## Run locally (test it yourself / record a demo — $0)
 
