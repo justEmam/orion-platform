@@ -36,9 +36,10 @@
 	}
 }
 
-# www -> apex redirect. On the VPS set WWW_DOMAIN=www.yourdomain.com in
-# caddy.env AND add a DNS A record for "www" pointing at the same server.
-# The local default resolves to a hostname nobody uses, so it's inert in dev.
-{$WWW_DOMAIN:http://www.localhost} {
-	redir https://{$SITE_DOMAIN}{uri} permanent
+# www -> apex redirect. ONLY active if you set WWW_DOMAIN in caddy.env (i.e.
+# once you have a domain + a "www" DNS A record). If WWW_DOMAIN is unset — e.g.
+# running on a bare IP with no domain yet — this block binds to a private,
+# non-routable host and is effectively inert (nothing reaches it).
+{$WWW_DOMAIN:http://www.invalid} {
+	redir {$SITE_DOMAIN}{uri} permanent
 }
