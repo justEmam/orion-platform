@@ -67,15 +67,13 @@ services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-orion}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orion}
-      POSTGRES_DB: ${POSTGRES_DB:-orion}
+    # Credentials come ONLY from db.env (no `environment:` block — that would
+    # read the shell and override db.env, silently defaulting the password).
     env_file: ./db.env
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orion}"]
+      test: ["CMD-SHELL", "pg_isready -U orion"]
       interval: 5s
       timeout: 5s
       retries: 10
