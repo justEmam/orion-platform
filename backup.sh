@@ -31,8 +31,20 @@ docker compose -f docker-compose.prod.yml exec -T cms \
   tar -C /app -czf - media > "backups/media-$STAMP.tar.gz" 2>/dev/null || \
   echo "(no media dir yet — skipped media backup)"
 
-# 3. Retention: keep the newest 14 of each, delete older.
+# 3. Retention: keep the newest 14 of each locally, delete older.
 ls -1t backups/db-*.sql.gz    2>/dev/null | tail -n +15 | xargs -r rm --
 ls -1t backups/media-*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm --
+
+# 4. OFF-SITE upload (optional). If rclone is installed AND a remote named
+#    "r2" exists (see BACKUP-OFFSITE.md), sync the backups folder to the bucket.
+#    Skipped silently if not configured — so the backup never fails over this.
+RCLONE_REMOTE="${RCLONE_REMOTE:-r2:orion-backups}"
+if command -v rclone >/dev/null 2>&1 && rclone listremotes 2>/dev/null | grep -q '^r2:'; then
+  if rclone sync backups/ "$RCLONE_REMOTE" --quiet; then
+    echo "$(date '+%F %T') off-site sync OK -> $RCLONE_REMOTE"
+  else
+    echo "$(date '+%F %T') WARNING: off-site sync FAILED (local backup is fine)"
+  fi
+fi
 
 echo "$(date '+%F %T') backup OK: db-$STAMP.sql.gz ($(du -h "backups/db-$STAMP.sql.gz" | cut -f1))"
