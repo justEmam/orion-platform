@@ -40,6 +40,11 @@
 # once you have a domain + a "www" DNS A record). If WWW_DOMAIN is unset — e.g.
 # running on a bare IP with no domain yet — this block binds to a private,
 # non-routable host and is effectively inert (nothing reaches it).
+#
+# The redirect target MUST include the https:// scheme. SITE_DOMAIN is a bare
+# host (e.g. orionilam.com) so Caddy can issue its cert — but a scheme-less
+# `redir` produces a RELATIVE redirect, which loops (…/orionilam.com/orionilam
+# .com/…). Set WWW_REDIRECT_TO=https://orionilam.com in caddy.env to be safe.
 {$WWW_DOMAIN:http://www.invalid} {
-	redir {$SITE_DOMAIN}{uri} permanent
+	redir {$WWW_REDIRECT_TO:https://orionilam.com}{uri} permanent
 }
